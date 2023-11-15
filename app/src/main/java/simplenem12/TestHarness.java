@@ -10,7 +10,8 @@ import java.io.File;
 public class TestHarness {
 
   public static void main(String[] args) {
-    File simpleNem12File = new File(args[0]);
+    System.out.println("ran th");
+    // File simpleNem12File = new File(args[0]);
 
     // Uncomment below to try out test harness.
 //    Collection<MeterRead> meterReads = new SimpleNem12ParserImpl().parseSimpleNem12(simpleNem12File);
