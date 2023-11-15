@@ -4,10 +4,36 @@
 package simplenem12;
 
 import org.junit.jupiter.api.Test;
+
+import java.io.File;
+import java.util.Collection;
+import java.math.BigDecimal;
+
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class AppTest {
-    @Test void test() {
-         
+    @Test
+    public void testTotalVolumeForNMI6123456789() {
+        ClassLoader classLoader = TestHarness.class.getClassLoader();
+        File simpleNem12File = new File(classLoader.getResource("SimpleNem12.csv").getFile());
+        Collection<MeterRead> meterReads = new SimpleNem12ParserImpl().parseSimpleNem12(simpleNem12File);
+
+        MeterRead read6123456789 = meterReads.stream().filter(mr -> mr.getNmi().equals("6123456789")).findFirst().get();
+        BigDecimal expectedVolume = new BigDecimal("-36.84");
+        BigDecimal actualVolume = read6123456789.getTotalVolume();
+        assertEquals(expectedVolume, actualVolume, "Total volume for NMI 6123456789 does not match the expected value.");
+    }
+
+    @Test
+    public void testTotalVolumeForNMI6987654321() {
+        ClassLoader classLoader = TestHarness.class.getClassLoader();
+        File simpleNem12File = new File(classLoader.getResource("SimpleNem12.csv").getFile());
+        Collection<MeterRead> meterReads = new SimpleNem12ParserImpl().parseSimpleNem12(simpleNem12File);
+
+        MeterRead read6987654321 = meterReads.stream().filter(mr -> mr.getNmi().equals("6987654321")).findFirst().get();
+        BigDecimal expectedVolume = new BigDecimal("14.33");
+        BigDecimal actualVolume = read6987654321.getTotalVolume();
+        assertEquals(expectedVolume, actualVolume, "Total volume for NMI 6987654321 does not match the expected value.");
     }
 }
