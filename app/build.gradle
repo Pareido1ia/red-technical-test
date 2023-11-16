@@ -29,6 +29,15 @@ application {
     mainClass = 'simplenem12.TestHarness'
 }
 
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'simplenem12.TestHarness',
+                'Version': '1.0'
+        )
+    }
+}
+
 tasks.named('test') {
     // Use JUnit Platform for unit tests.
     useJUnitPlatform()
