@@ -6,6 +6,7 @@ package simplenem12;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.math.BigDecimal;
 
@@ -13,27 +14,144 @@ import java.math.BigDecimal;
 import static org.junit.jupiter.api.Assertions.*;
 
 class AppTest {
-    @Test
-    public void testTotalVolumeForNMI6123456789() {
+    public void negativeFileTest(String fileName, String expectedMessage) {
         ClassLoader classLoader = TestHarness.class.getClassLoader();
-        File simpleNem12File = new File(classLoader.getResource("SimpleNem12.csv").getFile());
-        Collection<MeterRead> meterReads = new SimpleNem12ParserImpl().parseSimpleNem12(simpleNem12File);
+        File errFile = new File(classLoader.getResource(fileName).getFile());
 
-        MeterRead read6123456789 = meterReads.stream().filter(mr -> mr.getNmi().equals("6123456789")).findFirst().get();
-        BigDecimal expectedVolume = new BigDecimal("-36.84");
-        BigDecimal actualVolume = read6123456789.getTotalVolume();
-        assertEquals(expectedVolume, actualVolume, "Total volume for NMI 6123456789 does not match the expected value.");
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            Collection<MeterRead> meterReads = new SimpleNem12ParserImpl().parseSimpleNem12(errFile);
+        });
+
+        assertTrue(exception.getMessage().contains(expectedMessage));
     }
 
     @Test
-    public void testTotalVolumeForNMI6987654321() {
+    public void testTotalVolumeForNMI1() {
         ClassLoader classLoader = TestHarness.class.getClassLoader();
         File simpleNem12File = new File(classLoader.getResource("SimpleNem12.csv").getFile());
         Collection<MeterRead> meterReads = new SimpleNem12ParserImpl().parseSimpleNem12(simpleNem12File);
 
-        MeterRead read6987654321 = meterReads.stream().filter(mr -> mr.getNmi().equals("6987654321")).findFirst().get();
-        BigDecimal expectedVolume = new BigDecimal("14.33");
-        BigDecimal actualVolume = read6987654321.getTotalVolume();
-        assertEquals(expectedVolume, actualVolume, "Total volume for NMI 6987654321 does not match the expected value.");
+        MeterRead read = meterReads.stream().filter(mr -> mr.getNmi().equals("6123456789")).findFirst().get();
+        BigDecimal expected = new BigDecimal("-36.84");
+        BigDecimal actual = read.getTotalVolume();
+        assertEquals(expected, actual, "Total volume for NMI 6123456789 does not match the expected value.");
+    }
+
+    @Test
+    public void testMeterVolumesForNMI1() {
+        ClassLoader classLoader = TestHarness.class.getClassLoader();
+        File simpleNem12File = new File(classLoader.getResource("SimpleNem12.csv").getFile());
+        Collection<MeterRead> meterReads = new SimpleNem12ParserImpl().parseSimpleNem12(simpleNem12File);
+
+        MeterRead read = meterReads.stream().filter(mr -> mr.getNmi().equals("6123456789")).findFirst().get();
+        Integer expected = 7;
+        Integer actual = read.getVolumes().size();
+        assertEquals(expected, actual, "The number of volumes for NMI 6123456789 does not match the expected value.");
+    }
+
+    @Test
+    public void testEnergyUnitForNMI1() {
+        ClassLoader classLoader = TestHarness.class.getClassLoader();
+        File simpleNem12File = new File(classLoader.getResource("SimpleNem12.csv").getFile());
+        Collection<MeterRead> meterReads = new SimpleNem12ParserImpl().parseSimpleNem12(simpleNem12File);
+
+        MeterRead read = meterReads.stream().filter(mr -> mr.getNmi().equals("6123456789")).findFirst().get();
+        EnergyUnit expected = EnergyUnit.KWH;
+        EnergyUnit actual = read.getEnergyUnit();
+        assertEquals(expected, actual, "Total volume for NMI 6123456789 does not match the expected value.");
+    }
+
+    @Test
+    public void testFirstVolumeDateForNMI1() {
+        ClassLoader classLoader = TestHarness.class.getClassLoader();
+        File simpleNem12File = new File(classLoader.getResource("SimpleNem12.csv").getFile());
+        Collection<MeterRead> meterReads = new SimpleNem12ParserImpl().parseSimpleNem12(simpleNem12File);
+
+        MeterRead read = meterReads.stream().filter(mr -> mr.getNmi().equals("6123456789")).findFirst().get();
+        LocalDate expected = LocalDate.parse("2016-11-13");
+        LocalDate actual = read.getVolumes().firstKey();
+        assertEquals(expected, actual, "Date for first meter volume NMI 6123456789 does not match the expected date.");
+    }
+
+
+    @Test
+    public void testQualityForNMI1() {
+        ClassLoader classLoader = TestHarness.class.getClassLoader();
+        File simpleNem12File = new File(classLoader.getResource("SimpleNem12.csv").getFile());
+        Collection<MeterRead> meterReads = new SimpleNem12ParserImpl().parseSimpleNem12(simpleNem12File);
+
+        MeterRead read = meterReads.stream().filter(mr -> mr.getNmi().equals("6123456789")).findFirst().get();
+        Integer expectedA = 6;
+        Integer expectedE = 1;
+
+        Integer actualA = Math.toIntExact(read.getVolumes().entrySet().stream().filter(o -> o.getValue().getQuality().equals(Quality.A)).count());
+        Integer actualE = Math.toIntExact(read.getVolumes().entrySet().stream().filter(o -> o.getValue().getQuality().equals(Quality.E)).count());
+        assertEquals(expectedA, actualA, "Number of Actual readings for NMI 6123456789 does not match the expected number.");
+        assertEquals(expectedE, actualE, "Number of Estimated readings for NMI 6123456789 does not match the expected number.");
+    }
+
+    @Test
+    public void testEmptyFile() {
+        negativeFileTest("ErrEmpty.csv", "File is empty");
+    }
+
+    @Test
+    public void testNo100File() {
+        negativeFileTest("ErrNo100.csv", "File must start with record type 100");
+    }
+
+    @Test
+    public void testNo900File() {
+        negativeFileTest("ErrNo900.csv", "File must end with record type 900");
+    }
+
+    @Test
+    public void test100AfterFileStart() {
+        negativeFileTest("Err100AfterFileStart.csv", "100 only valid at file start");
+    }
+
+    @Test
+    public void test100BeforeFileEnd() {
+        negativeFileTest("Err900BeforeFileEnd.csv", "900 only valid at file end");
+    }
+
+    @Test
+    public void testInvalidRecordType() {
+        negativeFileTest("ErrInvalidRecordType.csv", "Unknown record type: 177");
+    }
+
+    @Test
+    public void testMeterVolumeBeforeRead() {
+        negativeFileTest("ErrVolumeBeforeRead.csv", "No current meter read for record type: 300");
+    }
+
+    @Test
+    public void testInvalidMeterRead() {
+        negativeFileTest("ErrInvalidMeterRead1.csv", "Invalid meter read record");
+    }
+
+    @Test
+    public void testInvalidMeterReadNmi() {
+        negativeFileTest("ErrInvalidMeterRead2.csv", "Invalid nmi");
+    }
+
+    @Test
+    public void testInvalidMeterReadEnergyUnit() {
+        negativeFileTest("ErrInvalidMeterRead3.csv", "Invalid energy unit");
+    }
+
+    @Test
+    public void testInvalidMeterVolume() {
+        negativeFileTest("ErrInvalidMeterVolume1.csv", "Invalid meter volume record");
+    }
+
+    @Test
+    public void testInvalidMeterVolumeNumerical() {
+        negativeFileTest("ErrInvalidMeterVolume2.csv", "Invalid volume");
+    }
+
+    @Test
+    public void testInvalidMeterEnergyUnit() {
+        negativeFileTest("ErrInvalidMeterVolume3.csv", "Invalid quality");
     }
 }
